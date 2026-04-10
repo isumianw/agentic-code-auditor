@@ -1,0 +1,8 @@
+# environment variables
+.env
+
+# temp repos cloned during analysis
+temp_repos/
+
+# virtual environment
+venv/
