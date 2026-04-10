@@ -87,7 +87,7 @@ Core pipeline implemented:
 ## Setup
 
 ```bash
-git clone https://github.com/YOUR-USERNAME/agentic-code-auditor.git
+git clone https://github.com/isumianw/agentic-code-auditor.git
 cd agentic-code-auditor
 
 python -m venv venv
