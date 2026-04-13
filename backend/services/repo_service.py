@@ -1,5 +1,6 @@
 import os
 import shutil
+import stat
 import re
 from git import Repo, GitCommandError
 
@@ -110,6 +111,10 @@ def clone_repository(github_url: str) -> dict:
             "repo_name": None,
             "message": f"Unexpected error: {str(e)}"
         }
+
+def handle_remove_readonly(func, path, exc):
+    os.chmod(path, stat.S_IWRITE)
+    func(path)
     
 def delete_repository(repo_name: str) -> dict:
     """
@@ -123,9 +128,17 @@ def delete_repository(repo_name: str) -> dict:
             "success": False,
             "message": f"Repo '{repo_name}' not found in temp storage"
         }
-    
-    shutil.rmtree(local_path)
-    return {
-        "success": True,
-        "message": f"Deleted '{repo_name}' from temp storage"
-    }
+
+    try:
+        shutil.rmtree(local_path, onerror=handle_remove_readonly)
+
+        return {
+            "success": True,
+            "message": f"Deleted '{repo_name}' from temp storage"
+        }
+
+    except Exception as e:
+        return {
+            "success": False,
+            "message": f"Delete failed: {str(e)}"
+        }
