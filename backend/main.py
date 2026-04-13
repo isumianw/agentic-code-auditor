@@ -1,5 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from backend.routes.repo_routes import router as repo_router
 
 # FastAPI app instance
 app = FastAPI(
@@ -16,6 +17,10 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# register routers
+# prefix="/api/v1" (all routes become /api/v1/repo/clone etc.)
+app.include_router(repo_router, prefix="/api/v1")
 
 # health check endpoint
 @app.get("/health")
