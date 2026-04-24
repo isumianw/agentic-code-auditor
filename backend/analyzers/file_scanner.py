@@ -223,7 +223,7 @@ def scan_repository(local_path: str) -> dict:
             # read the file content
             content = read_file_safely(file_path)
             if content is None:
-                erros.append(f"Could not read file: {file_path}")
+                errors.append(f"Could not read file: {file_path}")
                 continue
 
             # build a clean relative path
@@ -281,4 +281,38 @@ def scan_repository(local_path: str) -> dict:
         "summary": summary,
         "files": scanned_files,
         "errors": errors
+    }
+
+def get_file_by_path(local_path: str, relative_file_path: str) -> dict:
+    """
+    gets data for a single specific file in the repo
+    useful to analyse just one file
+    """
+    full_path = os.path.join(local_path, relative_file_path)
+
+    if not os.path.exists(full_path):
+        return {
+            "success": False,
+            "message": f"File not found: {relative_file_path}"
+        }
+    
+    content = read_file_safely(full_path)
+    if content is None:
+        return {
+            "success": False,
+            "message": f"Could not read file: {relative_file_path}"
+        }
+    
+    file_size_bytes = os.path.getsize(full_path)
+    line_info = count_lines(content)
+    structure = extract_functions_and_classes(content)
+
+    return {
+        "success": True,
+        "file_name": os.path.basename(full_path),
+        "relative_path": relative_file_path,
+        "size_kb": round(file_size_bytes / 1024, 2),
+        "lines": line_info,
+        "structure": structure,
+        "content": content
     }
