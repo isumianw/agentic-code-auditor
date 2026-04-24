@@ -145,7 +145,7 @@ def extract_functions_and_classes(content: str) -> dict:
                 pass
 
     return {
-        "functions": function,
+        "functions": functions,
         "classes": classes,
         "function_count": len(functions),
         "class_count": len(classes)
