@@ -150,3 +150,135 @@ def extract_functions_and_classes(content: str) -> dict:
         "function_count": len(functions),
         "class_count": len(classes)
     }
+
+# MAIN SCANNER FUNCTION
+
+def scan_repository(local_path: str) -> dict:
+    """
+    main function - scans an entire repository and returns all file data
+
+    takes:
+        local_path - the path to the cloned repo
+
+    returns:
+        a dict with:
+        - success
+        - repo_path
+        - summary (counts, totals)
+        - files (list of file data)
+        - errors (any files that failed)
+    """
+
+    # check the repo actually exists
+    if not os.path.exists(local_path):
+        return {
+            "success": False,
+            "repo_path": local_path,
+            "summary": {},
+            "files": [],
+            "errors": [f"Repository path does not exist: {local_path}"]
+        }
+    
+    scanned_files = []
+    skipped_files = []
+    errors = []
+
+    print(f"\nScanning repository: {local_path}")
+    print("-" * 50)
+
+    # os.walk() visits every single folder and subfolder in the repo
+    # for each folder it gives:
+    #   root = current folder path
+    #   dirs = list of subfolders in it
+    #   files = list of files in it
+    for root, dirs, files in os.walk(local_path):
+        # filter out directors that need to be ignored
+        dirs[:] = [
+            d for d in dirs
+            if not should_ignore_directory(d)
+        ]
+
+        # process each file
+        for file_name in files:
+            # only process supported file types
+            extension = get_file_extension(file_name)
+            if extension not in SUPPORTED_EXTENSIONS:
+                continue
+
+            # build the full path to this file
+            file_path = os.path.join(root, file_name)
+
+            # get file size
+            try:
+                file_size_bytes = os.path.getsize(file_path)
+            except OSError:
+                errors.append(f"Could not get size of: {file_path}")
+                continue
+
+            # check if this file should be skipped
+            if should_ignore_file(file_name, file_size_bytes):
+                skipped_files.append(file_name)
+                continue
+
+            # read the file content
+            content = read_file_safely(file_path)
+            if content is None:
+                erros.append(f"Could not read file: {file_path}")
+                continue
+
+            # build a clean relative path
+            relative_path = os.path.relpath(file_path, local_path)
+            # normalise slashes for consistency
+            relative_path = relative_path.replace('\\', '/')
+
+            # count lines
+            line_info = count_lines(content)
+
+            # extract structure info
+            structure = extract_functions_and_classes(content)
+
+            # package everything about this file
+            file_data = {
+                "file_name": file_name,
+                "relative_path": relative_path,
+                "absolute_path": file_path,
+                "extension": extension,
+                "size_bytes": file_size_bytes,
+                "size_kb": round(file_size_bytes / 1024, 2),
+                "lines": line_info,
+                "structure": structure,
+                "content": content
+            }
+
+            scanned_files.append(file_data)
+            print(f"  ✓ {relative_path} ({line_info['total']} lines)")
+
+    
+    # build the summary
+    total_lines = sum(f["lines"]["total"] for f in scanned_files)
+    total_functions = sum(f["structure"]["function_count"] for f in scanned_files)
+    total_classes = sum(f["structure"]["class_count"] for f in scanned_files)
+
+    summary = {
+        "total_files_scanned": len(scanned_files),
+        "total_files_skipped": len(skipped_files),
+        "total_lines_of_code": total_lines,
+        "total_functions_found": total_functions,
+        "total_classes_found": total_classes,
+        "languages_detected": ["Python"],
+        "skipped_files": skipped_files
+    }
+
+    print(f"\nScan complete:")
+    print(f"  Files scanned : {summary['total_files_scanned']}")
+    print(f"  Total lines   : {summary['total_lines_of_code']}")
+    print(f"  Functions     : {summary['total_functions_found']}")
+    print(f"  Classes       : {summary['total_classes_found']}")
+
+    return {
+        "success": True,
+        "repo_path": local_path,
+        "summary": summary,
+        "files": scanned_files,
+        "errors": errors
+    }
